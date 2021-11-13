@@ -1,7 +1,7 @@
 protoc:
-	protoc user.proto --go-grpc_out=. --go_out=.
-	protoc product.proto --go-grpc_out=. --go_out=.
-	protoc cart.proto --go-grpc_out=. --go_out=.
+	protoc proto-files/user.proto --go-grpc_out=. --go_out=.
+	protoc proto-files/product.proto --go-grpc_out=. --go_out=.
+	protoc proto-files/cart.proto --go-grpc_out=. --go_out=.
 	
 run:
 	go run main.go
