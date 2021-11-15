@@ -48,6 +48,18 @@ input NewProduct {
   imageUrl: String!
 }
 
+type CartItem {
+  id: String!
+  productSku: String!
+  product: Product!
+  quantity: Int!
+}
+
+input NewCartItem {
+  productSku: String!
+  quantity: Int!
+}
+
 type Query {
   getProduct(sku: String!): Product!
 }
@@ -56,4 +68,5 @@ type Mutation {
   authLogin(email: String!, password: String!): LoginResponse!
   createUser(input: NewUser!): User!
   addNewProduct(input: NewProduct!): Product! @isAuthenticated
+  addToCart(input: NewCartItem!): CartItem!
 }

@@ -17,6 +17,11 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+func (r *cartItemResolver) Product(ctx context.Context, obj *model.CartItem) (*model.Product, error) {
+	// TODO(wisdommatt): use dataloader to retrieve products
+	return r.Query().GetProduct(ctx, obj.ProductSku)
+}
+
 func (r *mutationResolver) AuthLogin(ctx context.Context, email string, password string) (*model.LoginResponse, error) {
 	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "AuthLogin")
 	defer span.Finish()
@@ -73,9 +78,8 @@ func (r *mutationResolver) AddNewProduct(ctx context.Context, input model.NewPro
 	span.LogFields(
 		log.Object("param.input", input),
 	)
-	jwtToken := ctx.Value(JwtContextKey).(string)
 	metaData := metadata.New(map[string]string{
-		"Authorization": jwtToken,
+		"Authorization": ctx.Value(JwtContextKey).(string),
 	})
 	ctx = metadata.NewOutgoingContext(ctx, metaData)
 	newProduct, err := r.ProductServiceClient.AddProduct(ctx, GqlNewProductToProto(&input))
@@ -83,6 +87,28 @@ func (r *mutationResolver) AddNewProduct(ctx context.Context, input model.NewPro
 		return nil, parseGrpcError(err)
 	}
 	return ProtoProductToGql(newProduct), nil
+}
+
+func (r *mutationResolver) AddToCart(ctx context.Context, input model.NewCartItem) (*model.CartItem, error) {
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "AddToCart")
+	defer span.Finish()
+
+	if input.ProductSku == "" || input.Quantity == 0 {
+		ext.Error.Set(span, true)
+		span.LogFields(
+			log.Error(errors.New("all fields are required")),
+		)
+		return nil, errors.New("all fields are required")
+	}
+	metaData := metadata.New(map[string]string{
+		"Authorization": ctx.Value(JwtContextKey).(string),
+	})
+	ctx = metadata.NewOutgoingContext(ctx, metaData)
+	newCartItem, err := r.CartServiceClient.AddToCart(ctx, GqlNewCartItemToProto(&input))
+	if err != nil {
+		return nil, parseGrpcError(err)
+	}
+	return ProtoCartItemToGql(newCartItem), nil
 }
 
 func (r *queryResolver) GetProduct(ctx context.Context, sku string) (*model.Product, error) {
@@ -96,11 +122,15 @@ func (r *queryResolver) GetProduct(ctx context.Context, sku string) (*model.Prod
 	return ProtoProductToGql(product), nil
 }
 
+// CartItem returns generated.CartItemResolver implementation.
+func (r *Resolver) CartItem() generated.CartItemResolver { return &cartItemResolver{r} }
+
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
+type cartItemResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

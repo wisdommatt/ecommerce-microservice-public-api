@@ -2,9 +2,21 @@
 
 package model
 
+type CartItem struct {
+	ID         string   `json:"id"`
+	ProductSku string   `json:"productSku"`
+	Product    *Product `json:"product"`
+	Quantity   int      `json:"quantity"`
+}
+
 type LoginResponse struct {
 	JwtToken string `json:"jwtToken"`
 	User     *User  `json:"user"`
+}
+
+type NewCartItem struct {
+	ProductSku string `json:"productSku"`
+	Quantity   int    `json:"quantity"`
 }
 
 type NewProduct struct {

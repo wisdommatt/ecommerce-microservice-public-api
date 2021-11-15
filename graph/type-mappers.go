@@ -56,6 +56,21 @@ func ProtoProductToGql(product *proto.Product) *model.Product {
 	}
 }
 
+func GqlNewCartItemToProto(item *model.NewCartItem) *proto.NewCartItem {
+	return &proto.NewCartItem{
+		ProductSku: html.EscapeString(item.ProductSku),
+		Quantity:   int32(item.Quantity),
+	}
+}
+
+func ProtoCartItemToGql(item *proto.CartItem) *model.CartItem {
+	return &model.CartItem{
+		ID:         item.Id,
+		ProductSku: item.ProductSku,
+		Quantity:   int(item.Quantity),
+	}
+}
+
 func unpointStr(str *string) string {
 	if str == nil {
 		return ""
