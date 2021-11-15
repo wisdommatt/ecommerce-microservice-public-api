@@ -1,6 +1,7 @@
 # GraphQL schema example
 #
 # https://gqlgen.com/getting-started/
+scalar Email
 
 type User {
   id: ID!
@@ -19,6 +20,14 @@ type LoginResponse {
   user: User!
 }
 
+input NewUser {
+  fullName: String!
+  email: Email!
+  country: String!
+  password: String!
+}
+
 type Mutation {
   authLogin(email: String!, password: String!): LoginResponse!
+  createUser(input: NewUser!): User!
 }

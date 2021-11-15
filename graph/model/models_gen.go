@@ -7,6 +7,13 @@ type LoginResponse struct {
 	User     *User  `json:"user"`
 }
 
+type NewUser struct {
+	FullName string `json:"fullName"`
+	Email    string `json:"email"`
+	Country  string `json:"country"`
+	Password string `json:"password"`
+}
+
 type Pagination struct {
 	AfterID *string `json:"afterId"`
 	Limit   int     `json:"limit"`
