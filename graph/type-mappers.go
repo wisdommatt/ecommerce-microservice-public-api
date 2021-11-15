@@ -56,10 +56,11 @@ func ProtoProductToGql(product *proto.Product) *model.Product {
 	}
 }
 
-func GqlNewCartItemToProto(item *model.NewCartItem) *proto.NewCartItem {
+func GqlNewCartItemToProto(item *model.NewCartItem, userId string) *proto.NewCartItem {
 	return &proto.NewCartItem{
 		ProductSku: html.EscapeString(item.ProductSku),
 		Quantity:   int32(item.Quantity),
+		UserId:     userId,
 	}
 }
 

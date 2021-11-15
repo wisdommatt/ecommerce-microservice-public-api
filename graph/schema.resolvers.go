@@ -100,11 +100,12 @@ func (r *mutationResolver) AddToCart(ctx context.Context, input model.NewCartIte
 		)
 		return nil, errors.New("all fields are required")
 	}
+	authUser := ctx.Value(userContextKey).(*model.User)
 	metaData := metadata.New(map[string]string{
 		"Authorization": ctx.Value(JwtContextKey).(string),
 	})
 	ctx = metadata.NewOutgoingContext(ctx, metaData)
-	newCartItem, err := r.CartServiceClient.AddToCart(ctx, GqlNewCartItemToProto(&input))
+	newCartItem, err := r.CartServiceClient.AddToCart(ctx, GqlNewCartItemToProto(&input, authUser.ID))
 	if err != nil {
 		return nil, parseGrpcError(err)
 	}
@@ -112,6 +113,9 @@ func (r *mutationResolver) AddToCart(ctx context.Context, input model.NewCartIte
 }
 
 func (r *queryResolver) GetProduct(ctx context.Context, sku string) (*model.Product, error) {
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "GetProduct")
+	defer span.Finish()
+
 	if sku == "" {
 		return nil, errors.New("sku cannot be empty")
 	}
@@ -123,7 +127,7 @@ func (r *queryResolver) GetProduct(ctx context.Context, sku string) (*model.Prod
 }
 
 func (r *queryResolver) GetUsers(ctx context.Context, pagination model.Pagination) ([]*model.User, error) {
-	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "AddToCart")
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "GetUsers")
 	defer span.Finish()
 
 	if pagination.Limit > 100 {
@@ -145,6 +149,22 @@ func (r *queryResolver) GetUsers(ctx context.Context, pagination model.Paginatio
 		users = append(users, ProtoUserToGql(user))
 	}
 	return users, nil
+}
+
+func (r *queryResolver) GetUserCart(ctx context.Context) ([]*model.CartItem, error) {
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "GetUserCart")
+	defer span.Finish()
+
+	authUser := ctx.Value(userContextKey).(*model.User)
+	userCart, err := r.CartServiceClient.GetUserCart(ctx, &proto.GetUserCartInput{UserId: authUser.ID})
+	if err != nil {
+		return nil, parseGrpcError(err)
+	}
+	var cartItems []*model.CartItem
+	for _, item := range userCart.GetItems() {
+		cartItems = append(cartItems, ProtoCartItemToGql(item))
+	}
+	return cartItems, nil
 }
 
 // CartItem returns generated.CartItemResolver implementation.

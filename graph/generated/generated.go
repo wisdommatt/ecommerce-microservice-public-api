@@ -76,8 +76,9 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		GetProduct func(childComplexity int, sku string) int
-		GetUsers   func(childComplexity int, pagination model.Pagination) int
+		GetProduct  func(childComplexity int, sku string) int
+		GetUserCart func(childComplexity int) int
+		GetUsers    func(childComplexity int, pagination model.Pagination) int
 	}
 
 	User struct {
@@ -100,6 +101,7 @@ type MutationResolver interface {
 type QueryResolver interface {
 	GetProduct(ctx context.Context, sku string) (*model.Product, error)
 	GetUsers(ctx context.Context, pagination model.Pagination) ([]*model.User, error)
+	GetUserCart(ctx context.Context) ([]*model.CartItem, error)
 }
 
 type executableSchema struct {
@@ -267,6 +269,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.GetProduct(childComplexity, args["sku"].(string)), true
+
+	case "Query.getUserCart":
+		if e.complexity.Query.GetUserCart == nil {
+			break
+		}
+
+		return e.complexity.Query.GetUserCart(childComplexity), true
 
 	case "Query.getUsers":
 		if e.complexity.Query.GetUsers == nil {
@@ -437,13 +446,14 @@ input NewCartItem {
 type Query {
   getProduct(sku: String!): Product!
   getUsers(pagination: Pagination!): [User!]! @isAuthenticated
+  getUserCart: [CartItem!]! @isAuthenticated
 }
 
 type Mutation {
   authLogin(email: String!, password: String!): LoginResponse!
   createUser(input: NewUser!): User!
   addNewProduct(input: NewProduct!): Product! @isAuthenticated
-  addToCart(input: NewCartItem!): CartItem!
+  addToCart(input: NewCartItem!): CartItem! @isAuthenticated
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -984,8 +994,28 @@ func (ec *executionContext) _Mutation_addToCart(ctx context.Context, field graph
 	}
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddToCart(rctx, args["input"].(model.NewCartItem))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().AddToCart(rctx, args["input"].(model.NewCartItem))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.IsAuthenticated == nil {
+				return nil, errors.New("directive isAuthenticated is not implemented")
+			}
+			return ec.directives.IsAuthenticated(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.CartItem); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wisdommatt/ecommerce-microservice-public-api/graph/model.CartItem`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1349,6 +1379,61 @@ func (ec *executionContext) _Query_getUsers(ctx context.Context, field graphql.C
 	res := resTmp.([]*model.User)
 	fc.Result = res
 	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋwisdommattᚋecommerceᚑmicroserviceᚑpublicᚑapiᚋgraphᚋmodelᚐUserᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_getUserCart(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetUserCart(rctx)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.IsAuthenticated == nil {
+				return nil, errors.New("directive isAuthenticated is not implemented")
+			}
+			return ec.directives.IsAuthenticated(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.CartItem); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wisdommatt/ecommerce-microservice-public-api/graph/model.CartItem`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.CartItem)
+	fc.Result = res
+	return ec.marshalNCartItem2ᚕᚖgithubᚗcomᚋwisdommattᚋecommerceᚑmicroserviceᚑpublicᚑapiᚋgraphᚋmodelᚐCartItemᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -3093,6 +3178,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}
 				return res
 			})
+		case "getUserCart":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getUserCart(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "__type":
 			out.Values[i] = ec._Query___type(ctx, field)
 		case "__schema":
@@ -3417,6 +3516,50 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 
 func (ec *executionContext) marshalNCartItem2githubᚗcomᚋwisdommattᚋecommerceᚑmicroserviceᚑpublicᚑapiᚋgraphᚋmodelᚐCartItem(ctx context.Context, sel ast.SelectionSet, v model.CartItem) graphql.Marshaler {
 	return ec._CartItem(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNCartItem2ᚕᚖgithubᚗcomᚋwisdommattᚋecommerceᚑmicroserviceᚑpublicᚑapiᚋgraphᚋmodelᚐCartItemᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CartItem) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNCartItem2ᚖgithubᚗcomᚋwisdommattᚋecommerceᚑmicroserviceᚑpublicᚑapiᚋgraphᚋmodelᚐCartItem(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNCartItem2ᚖgithubᚗcomᚋwisdommattᚋecommerceᚑmicroserviceᚑpublicᚑapiᚋgraphᚋmodelᚐCartItem(ctx context.Context, sel ast.SelectionSet, v *model.CartItem) graphql.Marshaler {
