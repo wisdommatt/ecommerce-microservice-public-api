@@ -101,15 +101,37 @@ func (r *mutationResolver) AddToCart(ctx context.Context, input model.NewCartIte
 		return nil, errors.New("all fields are required")
 	}
 	authUser := ctx.Value(userContextKey).(*model.User)
-	metaData := metadata.New(map[string]string{
-		"Authorization": ctx.Value(JwtContextKey).(string),
-	})
-	ctx = metadata.NewOutgoingContext(ctx, metaData)
 	newCartItem, err := r.CartServiceClient.AddToCart(ctx, GqlNewCartItemToProto(&input, authUser.ID))
 	if err != nil {
 		return nil, parseGrpcError(err)
 	}
 	return ProtoCartItemToGql(newCartItem), nil
+}
+
+func (r *mutationResolver) RemoveItemsFromUserCart(ctx context.Context, itemsID []string) ([]*model.CartItem, error) {
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "RemoveItemsFromUserCart")
+	defer span.Finish()
+
+	if len(itemsID) == 0 {
+		ext.Error.Set(span, true)
+		span.LogFields(
+			log.Error(errors.New("atleast one item id must be provided")),
+		)
+		return nil, errors.New("atleast one item id must be provided")
+	}
+	authUser := ctx.Value(userContextKey).(*model.User)
+	response, err := r.CartServiceClient.RemoveItemsFromCart(ctx, &proto.RemoveItemsFromCartInput{
+		UserId:  authUser.ID,
+		ItemIds: itemsID,
+	})
+	if err != nil {
+		return nil, parseGrpcError(err)
+	}
+	var cartItems []*model.CartItem
+	for _, item := range response.GetItems() {
+		cartItems = append(cartItems, ProtoCartItemToGql(item))
+	}
+	return cartItems, nil
 }
 
 func (r *queryResolver) GetProduct(ctx context.Context, sku string) (*model.Product, error) {

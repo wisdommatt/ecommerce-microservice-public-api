@@ -71,4 +71,5 @@ type Mutation {
   createUser(input: NewUser!): User!
   addNewProduct(input: NewProduct!): Product! @isAuthenticated
   addToCart(input: NewCartItem!): CartItem! @isAuthenticated
+  removeItemsFromUserCart(itemsId: [String!]!): [CartItem!]! @isAuthenticated
 }
