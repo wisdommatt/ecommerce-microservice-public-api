@@ -12,3 +12,7 @@ tests:
 watch:
 	go install github.com/cespare/reflex@latest
 	reflex -s -- sh -c 'clear && go run main.go'
+
+generate:
+	go get github.com/99designs/gqlgen
+	go generate ./...
