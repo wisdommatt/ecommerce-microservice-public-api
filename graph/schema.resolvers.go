@@ -122,6 +122,31 @@ func (r *queryResolver) GetProduct(ctx context.Context, sku string) (*model.Prod
 	return ProtoProductToGql(product), nil
 }
 
+func (r *queryResolver) GetUsers(ctx context.Context, pagination model.Pagination) ([]*model.User, error) {
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "AddToCart")
+	defer span.Finish()
+
+	if pagination.Limit > 100 {
+		ext.Error.Set(span, true)
+		span.LogFields(
+			log.Error(errors.New("pagination max of 100 exceeded")),
+		)
+		return nil, errors.New("pagination max is 100")
+	}
+	usersResponse, err := r.UserServiceClient.GetUsers(ctx, &proto.GetUsersFilter{
+		AfterId: unpointStr(pagination.AfterID),
+		Limit:   int32(pagination.Limit),
+	})
+	if err != nil {
+		return nil, parseGrpcError(err)
+	}
+	var users []*model.User
+	for _, user := range usersResponse.GetUsers() {
+		users = append(users, ProtoUserToGql(user))
+	}
+	return users, nil
+}
+
 // CartItem returns generated.CartItemResolver implementation.
 func (r *Resolver) CartItem() generated.CartItemResolver { return &cartItemResolver{r} }
 
