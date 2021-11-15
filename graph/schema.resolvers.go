@@ -85,7 +85,22 @@ func (r *mutationResolver) AddNewProduct(ctx context.Context, input model.NewPro
 	return ProtoProductToGql(newProduct), nil
 }
 
+func (r *queryResolver) GetProduct(ctx context.Context, sku string) (*model.Product, error) {
+	if sku == "" {
+		return nil, errors.New("sku cannot be empty")
+	}
+	product, err := r.ProductServiceClient.GetProduct(ctx, &proto.GetProductInput{Sku: sku})
+	if err != nil {
+		return nil, parseGrpcError(err)
+	}
+	return ProtoProductToGql(product), nil
+}
+
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
+// Query returns generated.QueryResolver implementation.
+func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
+
 type mutationResolver struct{ *Resolver }
+type queryResolver struct{ *Resolver }

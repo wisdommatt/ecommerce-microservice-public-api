@@ -48,6 +48,10 @@ input NewProduct {
   imageUrl: String!
 }
 
+type Query {
+  getProduct(sku: String!): Product!
+}
+
 type Mutation {
   authLogin(email: String!, password: String!): LoginResponse!
   createUser(input: NewUser!): User!
