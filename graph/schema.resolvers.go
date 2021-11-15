@@ -26,6 +26,7 @@ func (r *mutationResolver) AuthLogin(ctx context.Context, email string, password
 	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "AuthLogin")
 	defer span.Finish()
 	span.SetTag("param.email", email)
+	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	email = html.EscapeString(email)
 	password = html.EscapeString(password)
@@ -46,6 +47,7 @@ func (r *mutationResolver) AuthLogin(ctx context.Context, email string, password
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (*model.User, error) {
 	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "CreateUser")
 	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	if input.FullName == "" || input.Country == "" || input.Password == "" || input.Email == "" {
 		ext.Error.Set(span, true)
@@ -67,6 +69,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 func (r *mutationResolver) AddNewProduct(ctx context.Context, input model.NewProduct) (*model.Product, error) {
 	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "AddNewProduct")
 	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	if input.Name == "" || input.Category == "" || input.Description == "" || input.ImageURL == "" || input.Price == 0 {
 		ext.Error.Set(span, true)
@@ -92,6 +95,7 @@ func (r *mutationResolver) AddNewProduct(ctx context.Context, input model.NewPro
 func (r *mutationResolver) AddToCart(ctx context.Context, input model.NewCartItem) (*model.CartItem, error) {
 	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "AddToCart")
 	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	if input.ProductSku == "" || input.Quantity == 0 {
 		ext.Error.Set(span, true)
@@ -111,6 +115,7 @@ func (r *mutationResolver) AddToCart(ctx context.Context, input model.NewCartIte
 func (r *mutationResolver) RemoveItemsFromUserCart(ctx context.Context, itemsID []string) ([]*model.CartItem, error) {
 	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "RemoveItemsFromUserCart")
 	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	if len(itemsID) == 0 {
 		ext.Error.Set(span, true)
@@ -137,6 +142,7 @@ func (r *mutationResolver) RemoveItemsFromUserCart(ctx context.Context, itemsID 
 func (r *queryResolver) GetProduct(ctx context.Context, sku string) (*model.Product, error) {
 	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "GetProduct")
 	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	if sku == "" {
 		return nil, errors.New("sku cannot be empty")
@@ -151,6 +157,7 @@ func (r *queryResolver) GetProduct(ctx context.Context, sku string) (*model.Prod
 func (r *queryResolver) GetUsers(ctx context.Context, pagination model.Pagination) ([]*model.User, error) {
 	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "GetUsers")
 	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	if pagination.Limit > 100 {
 		ext.Error.Set(span, true)
@@ -176,6 +183,7 @@ func (r *queryResolver) GetUsers(ctx context.Context, pagination model.Paginatio
 func (r *queryResolver) GetUserCart(ctx context.Context) ([]*model.CartItem, error) {
 	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "GetUserCart")
 	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	authUser := ctx.Value(userContextKey).(*model.User)
 	userCart, err := r.CartServiceClient.GetUserCart(ctx, &proto.GetUserCartInput{UserId: authUser.ID})
@@ -192,6 +200,7 @@ func (r *queryResolver) GetUserCart(ctx context.Context) ([]*model.CartItem, err
 func (r *queryResolver) GetUser(ctx context.Context) (*model.User, error) {
 	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "GetUser")
 	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	jwtToken := ctx.Value(JwtContextKey).(string)
 	userResponse, err := r.UserServiceClient.GetUserFromJWT(ctx, &proto.GetUserFromJWTInput{JwtToken: jwtToken})
