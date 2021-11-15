@@ -64,6 +64,7 @@ type Query {
   getProduct(sku: String!): Product!
   getUsers(pagination: Pagination!): [User!]! @isAuthenticated
   getUserCart: [CartItem!]! @isAuthenticated
+  getUser: User! @isAuthenticated
 }
 
 type Mutation {

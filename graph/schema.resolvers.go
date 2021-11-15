@@ -189,6 +189,18 @@ func (r *queryResolver) GetUserCart(ctx context.Context) ([]*model.CartItem, err
 	return cartItems, nil
 }
 
+func (r *queryResolver) GetUser(ctx context.Context) (*model.User, error) {
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "GetUser")
+	defer span.Finish()
+
+	jwtToken := ctx.Value(JwtContextKey).(string)
+	userResponse, err := r.UserServiceClient.GetUserFromJWT(ctx, &proto.GetUserFromJWTInput{JwtToken: jwtToken})
+	if err != nil {
+		return nil, parseGrpcError(err)
+	}
+	return ProtoUserToGql(userResponse.User), nil
+}
+
 // CartItem returns generated.CartItemResolver implementation.
 func (r *Resolver) CartItem() generated.CartItemResolver { return &cartItemResolver{r} }
 
