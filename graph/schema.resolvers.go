@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"html"
-	"strings"
 
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -15,6 +14,7 @@ import (
 	"github.com/wisdommatt/ecommerce-microservice-public-api/graph/generated"
 	"github.com/wisdommatt/ecommerce-microservice-public-api/graph/model"
 	"github.com/wisdommatt/ecommerce-microservice-public-api/grpc/proto"
+	"google.golang.org/grpc/metadata"
 )
 
 func (r *mutationResolver) AuthLogin(ctx context.Context, email string, password string) (*model.LoginResponse, error) {
@@ -41,14 +41,7 @@ func (r *mutationResolver) AuthLogin(ctx context.Context, email string, password
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (*model.User, error) {
 	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "CreateUser")
 	defer span.Finish()
-	span.LogFields(
-		log.Object("param.input", input),
-	)
-	// validating the user input.
-	input.FullName = html.EscapeString(input.FullName)
-	input.Country = html.EscapeString(input.Country)
-	input.Password = html.EscapeString(input.Password)
-	input.Email = html.EscapeString(strings.ToLower(input.Email))
+
 	if input.FullName == "" || input.Country == "" || input.Password == "" || input.Email == "" {
 		ext.Error.Set(span, true)
 		span.LogFields(
@@ -56,11 +49,40 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 		)
 		return nil, errors.New("all fields are required")
 	}
+	span.LogFields(
+		log.Object("param.input", input),
+	)
 	newUser, err := r.UserServiceClient.CreateUser(ctx, GqlNewUserToProto(&input))
 	if err != nil {
 		return nil, parseGrpcError(err)
 	}
 	return ProtoUserToGql(newUser), nil
+}
+
+func (r *mutationResolver) AddNewProduct(ctx context.Context, input model.NewProduct) (*model.Product, error) {
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.Tracer, "AddNewProduct")
+	defer span.Finish()
+
+	if input.Name == "" || input.Category == "" || input.Description == "" || input.ImageURL == "" || input.Price == 0 {
+		ext.Error.Set(span, true)
+		span.LogFields(
+			log.Error(errors.New("all fields are required")),
+		)
+		return nil, errors.New("all fields except brand are required")
+	}
+	span.LogFields(
+		log.Object("param.input", input),
+	)
+	jwtToken := ctx.Value(JwtContextKey).(string)
+	metaData := metadata.New(map[string]string{
+		"Authorization": jwtToken,
+	})
+	ctx = metadata.NewOutgoingContext(ctx, metaData)
+	newProduct, err := r.ProductServiceClient.AddProduct(ctx, GqlNewProductToProto(&input))
+	if err != nil {
+		return nil, parseGrpcError(err)
+	}
+	return ProtoProductToGql(newProduct), nil
 }
 
 // Mutation returns generated.MutationResolver implementation.

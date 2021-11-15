@@ -23,11 +23,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-type contextKey string
-
 const defaultPort = "1212"
-
-var jwtContextKey contextKey = "jwt-context-key"
 
 func main() {
 	log := logrus.New()
@@ -87,12 +83,12 @@ func main() {
 		ProductServiceClient: productServiceClient,
 		CartServiceClient:    cartServiceClient,
 	}}
-	config.Directives.IsAuthenticated = graph.IsAuthenticated(jwtContextKey, userServiceClient)
+	config.Directives.IsAuthenticated = graph.IsAuthenticated(userServiceClient)
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(config))
 
 	router := chi.NewRouter()
 	router.Use(addJwtToHTTPContext)
-	router.Handle("/graphql/", playground.Handler("GraphQL playground", "/graphql/query"))
+	router.Handle("/graphql/playground", playground.Handler("GraphQL playground", "/graphql/query"))
 	router.Handle("/graphql/query", srv)
 	httpServer := &http.Server{
 		Addr:         ":" + port,
@@ -135,7 +131,7 @@ func addJwtToHTTPContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		authorizationHeader := r.Header.Get("Authorization")
 		jwtToken := strings.ReplaceAll(authorizationHeader, "Bearer ", "")
-		ctx := context.WithValue(r.Context(), jwtContextKey, jwtToken)
+		ctx := context.WithValue(r.Context(), graph.JwtContextKey, jwtToken)
 		next.ServeHTTP(rw, r.WithContext(ctx))
 	})
 }

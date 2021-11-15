@@ -8,15 +8,18 @@ import (
 	"github.com/wisdommatt/ecommerce-microservice-public-api/grpc/proto"
 )
 
-type contextKey string
+type ContextKey string
 
-var userContextKey contextKey = "user-graphql-key"
+var (
+	userContextKey ContextKey = "user-graphql-key"
+	JwtContextKey  ContextKey = "jwt-context-key"
+)
 
 type DirectiveFunc func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 
-func IsAuthenticated(jwtContextKey interface{}, userService proto.UserServiceClient) DirectiveFunc {
+func IsAuthenticated(userService proto.UserServiceClient) DirectiveFunc {
 	return func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error) {
-		jwtTokenI := ctx.Value(jwtContextKey)
+		jwtTokenI := ctx.Value(JwtContextKey)
 		if jwtTokenI == nil {
 			return nil, errors.New("you are not authenticated")
 		}

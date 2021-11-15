@@ -29,7 +29,27 @@ input NewUser {
   password: String!
 }
 
+type Product {
+  sku: String!
+  name: String!
+  description: String!
+  category: String!
+  brand: String!
+  price: Float!
+  imageUrl: String!
+}
+
+input NewProduct {
+  name: String!
+  description: String!
+  category: String!
+  brand: String
+  price: Float!
+  imageUrl: String!
+}
+
 type Mutation {
   authLogin(email: String!, password: String!): LoginResponse!
   createUser(input: NewUser!): User!
+  addNewProduct(input: NewProduct!): Product! @isAuthenticated
 }

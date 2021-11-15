@@ -7,6 +7,15 @@ type LoginResponse struct {
 	User     *User  `json:"user"`
 }
 
+type NewProduct struct {
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Category    string  `json:"category"`
+	Brand       *string `json:"brand"`
+	Price       float64 `json:"price"`
+	ImageURL    string  `json:"imageUrl"`
+}
+
 type NewUser struct {
 	FullName string `json:"fullName"`
 	Email    string `json:"email"`
@@ -17,6 +26,16 @@ type NewUser struct {
 type Pagination struct {
 	AfterID *string `json:"afterId"`
 	Limit   int     `json:"limit"`
+}
+
+type Product struct {
+	Sku         string  `json:"sku"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Category    string  `json:"category"`
+	Brand       string  `json:"brand"`
+	Price       float64 `json:"price"`
+	ImageURL    string  `json:"imageUrl"`
 }
 
 type User struct {

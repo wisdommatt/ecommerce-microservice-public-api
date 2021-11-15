@@ -1,6 +1,9 @@
 package graph
 
 import (
+	"html"
+	"strings"
+
 	"github.com/wisdommatt/ecommerce-microservice-public-api/graph/model"
 	"github.com/wisdommatt/ecommerce-microservice-public-api/grpc/proto"
 )
@@ -23,9 +26,39 @@ func ProtoLoginResponseToGql(res *proto.LoginResponse) *model.LoginResponse {
 
 func GqlNewUserToProto(user *model.NewUser) *proto.NewUser {
 	return &proto.NewUser{
-		Email:    user.Email,
-		FullName: user.FullName,
+		Email:    html.EscapeString(strings.ToLower(user.Email)),
+		FullName: html.EscapeString(user.FullName),
 		Password: user.Password,
-		Country:  user.Country,
+		Country:  html.EscapeString(user.Country),
 	}
+}
+
+func GqlNewProductToProto(product *model.NewProduct) *proto.NewProduct {
+	return &proto.NewProduct{
+		Name:        html.EscapeString(product.Name),
+		Category:    html.EscapeString(product.Category),
+		Description: html.EscapeString(product.Description),
+		Brand:       html.EscapeString(unpointStr(product.Brand)),
+		Price:       product.Price,
+		ImageUrl:    html.EscapeString(product.ImageURL),
+	}
+}
+
+func ProtoProductToGql(product *proto.Product) *model.Product {
+	return &model.Product{
+		Sku:         product.Sku,
+		Name:        product.Name,
+		Category:    product.Category,
+		Description: product.Description,
+		Brand:       product.Brand,
+		Price:       product.Price,
+		ImageURL:    product.ImageUrl,
+	}
+}
+
+func unpointStr(str *string) string {
+	if str == nil {
+		return ""
+	}
+	return *str
 }
