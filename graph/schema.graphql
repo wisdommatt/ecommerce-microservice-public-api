@@ -3,6 +3,8 @@
 # https://gqlgen.com/getting-started/
 scalar Email
 
+directive @isAuthenticated on FIELD_DEFINITION
+
 type User {
   id: ID!
   fullName: String!

@@ -9,13 +9,12 @@ import (
 	"html"
 	"strings"
 
-	"github.com/opentracing/opentracing-go"
+	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
 	"github.com/wisdommatt/ecommerce-microservice-public-api/graph/generated"
 	"github.com/wisdommatt/ecommerce-microservice-public-api/graph/model"
 	"github.com/wisdommatt/ecommerce-microservice-public-api/grpc/proto"
-	"google.golang.org/grpc/status"
 )
 
 func (r *mutationResolver) AuthLogin(ctx context.Context, email string, password string) (*model.LoginResponse, error) {
@@ -68,13 +67,3 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
 type mutationResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-func parseGrpcError(err error) error {
-	return errors.New(status.Convert(err).Message())
-}

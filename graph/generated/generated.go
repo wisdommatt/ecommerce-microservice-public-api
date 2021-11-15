@@ -38,6 +38,7 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
+	IsAuthenticated func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 }
 
 type ComplexityRoot struct {
@@ -216,6 +217,8 @@ var sources = []*ast.Source{
 #
 # https://gqlgen.com/getting-started/
 scalar Email
+
+directive @isAuthenticated on FIELD_DEFINITION
 
 type User {
   id: ID!

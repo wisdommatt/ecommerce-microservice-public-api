@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/go-chi/chi"
 	"github.com/joho/godotenv"
 	otgrpc "github.com/opentracing-contrib/go-grpc"
 	"github.com/opentracing/opentracing-go"
@@ -19,7 +23,11 @@ import (
 	"google.golang.org/grpc"
 )
 
+type contextKey string
+
 const defaultPort = "1212"
+
+var jwtContextKey contextKey = "jwt-context-key"
 
 func main() {
 	log := logrus.New()
@@ -73,18 +81,28 @@ func main() {
 	}
 	cartServiceClient := proto.NewCartServiceClient(cartServiceClientConn)
 
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{
+	config := generated.Config{Resolvers: &graph.Resolver{
 		Tracer:               initTracer("graphql-api"),
 		UserServiceClient:    userServiceClient,
 		ProductServiceClient: productServiceClient,
 		CartServiceClient:    cartServiceClient,
-	}}))
+	}}
+	config.Directives.IsAuthenticated = graph.IsAuthenticated(jwtContextKey, userServiceClient)
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(config))
 
-	http.Handle("/graphql/", playground.Handler("GraphQL playground", "/graphql/query"))
-	http.Handle("/graphql/query", srv)
+	router := chi.NewRouter()
+	router.Use(addJwtToHTTPContext)
+	router.Handle("/graphql/", playground.Handler("GraphQL playground", "/graphql/query"))
+	router.Handle("/graphql/query", srv)
+	httpServer := &http.Server{
+		Addr:         ":" + port,
+		Handler:      router,
+		WriteTimeout: 5 * time.Second,
+		ReadTimeout:  5 * time.Second,
+	}
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	log.Fatal(httpServer.ListenAndServe())
 }
 
 func mustLoadDotenv(log *logrus.Logger) {
@@ -111,4 +129,13 @@ func initJaegerTracer(serviceName string) opentracing.Tracer {
 		log.Fatal("ERROR: cannot init Jaeger", err)
 	}
 	return tracer
+}
+
+func addJwtToHTTPContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		authorizationHeader := r.Header.Get("Authorization")
+		jwtToken := strings.ReplaceAll(authorizationHeader, "Bearer ", "")
+		ctx := context.WithValue(r.Context(), jwtContextKey, jwtToken)
+		next.ServeHTTP(rw, r.WithContext(ctx))
+	})
 }
