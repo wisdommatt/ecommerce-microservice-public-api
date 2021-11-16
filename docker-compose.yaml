@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+  app:
+    container_name: microservice-public-api
+    image: golang:1.17.2-stretch
+    command: ["sh", "-c", "go mod download && go run main.go"]
+    ports:
+      - '1212:1212'
+    environment:
+      - PORT=1212
+    working_dir: /app
+    volumes:
+      - ./:/app
